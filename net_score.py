@@ -9,7 +9,7 @@ import cv2
 import ntpath
 import scipy.ndimage as ndi
 from skimage.measure import block_reduce
-
+import matplotlib.pyplot as plt
 XPAD = 8
 YPAD = 4
 IMAGE_SIZE = 96
@@ -21,6 +21,7 @@ def normalize1(img):
     return (img/np.max(img)).astype(np.float)
 
 def subtract_calc(arr, num_erodes, sigma=10):
+    print('calculating middle subtraction')
     orig_size = arr.shape
     subtraction = cv2.resize(arr, dsize=(1024, 1024), interpolation=cv2.INTER_CUBIC)
     subtraction = ndi.gaussian_filter(subtraction, sigma)
@@ -68,7 +69,7 @@ class PathBar(tk.Frame):
             print("Selected path: " + path)
             return 0
         return 1
-        
+
     def __init__(self, parent, *args, **kwargs):
         tk.Frame.__init__(self, parent, *args, **kwargs)
         self.parent = parent
@@ -124,39 +125,44 @@ class SimpleSlider(tk.Frame):
     def __init__(self, parent, txt, lims, res, sld_var, default, *args, **kwargs):
         tk.Frame.__init__(self, parent, *args, **kwargs)
         self.parent = parent
-        sld_lbl = tk.Label(self, text=txt)
-        sld = tk.Scale(self, 
+        self.sld_var = sld_var
+        self.sld_lbl = tk.Label(self, text=txt)
+        self.sld = tk.Scale(self, 
                     from_=lims[0],to=lims[1], resolution=res, 
                     orient=tk.HORIZONTAL, 
-                    variable=sld_var, 
                     showvalue=0)
-        sld_txt = tk.Label(self, textvariable=sld_var)
-        sld.set(default)
-
-        sld_lbl.grid(column=0, row=0, sticky="w")
-        sld.grid(column=1, row=0, sticky="ew")
-        sld_txt.grid(column=2, row=0, sticky="w")        
+        self.sld_txt = tk.Label(self, textvariable=sld_var)
+        self.sld.bind("<ButtonRelease-1>", self.updateValue)
+        
+        self.sld_lbl.grid(column=0, row=0, sticky="w")
+        self.sld.grid(column=1, row=0, sticky="ew")
+        self.sld_txt.grid(column=2, row=0, sticky="w")        
+        self.sld_var.set(default)
+        self.sld.set(default)
         for i, w in enumerate([0,1,0]):
             self.columnconfigure(i, weight=w)
+    
+    def updateValue(self, event):
+        self.sld_var.set(self.sld.get())
 
 class SlidersBar(tk.Frame):
 
     def __init__(self, parent, *args, **kwargs):
         tk.Frame.__init__(self, parent, *args, **kwargs)
         self.parent = parent
-        grid_line_sld = SimpleSlider(self, "Num Grid Lines", (10,1000),5,parent.num_divs,100)
-        mid_erode_sld = SimpleSlider(self, "Middle Erosion", (0, 100), 1, parent.mid_erode, 20)
-        adapt_sld = SimpleSlider(self, "Adaptive Background Removal Dia.", (50, 1000), 5, parent.adapt_dia, 100)
-        low_sld = SimpleSlider(self, "Px Value Lim (low)", (0, 254), 1, parent.low, 6)
-        high_sld = SimpleSlider(self, "Px Value Lim (high)", (1, 255), 1, parent.high, 30)
+        self.grid_line_sld = SimpleSlider(self, "Num Grid Lines", (10,1000),5,parent.num_divs,100)
+        self.mid_erode_sld = SimpleSlider(self, "Middle Erosion", (0, 100), 1, parent.mid_erode, 20)
+        self.adapt_sld = SimpleSlider(self, "Adaptive Background Removal Dia.", (50, 1000), 5, parent.adapt_dia, 100)
+        self.low_sld = SimpleSlider(self, "Px Value Lim (low)", (0, 254), 1, parent.low, 6)
+        self.high_sld = SimpleSlider(self, "Px Value Lim (high)", (1, 255), 1, parent.high, 30)
         
-        grid_line_sld.grid(column=0, row=0, sticky="ew", columnspan=2)
-        mid_erode_sld.grid(column=0, row=1, sticky="ew", columnspan=2)
-        adapt_sld.grid(column=0, row=2, sticky="ew", columnspan=2)
-        low_sld.grid(column=0, row=3, sticky="ew")
-        low_sld.configure(relief="raised", bd=2)
-        high_sld.grid(column=1, row=3, sticky="ew")
-        high_sld.configure(relief="raised", bd=2)
+        self.grid_line_sld.grid(column=0, row=0, sticky="ew", columnspan=2)
+        self.mid_erode_sld.grid(column=0, row=1, sticky="ew", columnspan=2)
+        self.adapt_sld.grid(column=0, row=2, sticky="ew", columnspan=2)
+        self.low_sld.grid(column=0, row=3, sticky="ew")
+        self.low_sld.configure(relief="raised", bd=2)
+        self.high_sld.grid(column=1, row=3, sticky="ew")
+        self.high_sld.configure(relief="raised", bd=2)
         
         self.columnconfigure(0, weight=1)
         self.columnconfigure(1, weight=1)
@@ -164,11 +170,7 @@ class SlidersBar(tk.Frame):
 class Display(tk.Frame):
     def motion(self, event):
         self.can.x, self.can.y = event.x, event.y
-    def load_image(self, path):
-        img = Image.open(path)
-        img_arr = np.array(img)
-        self.parent.arr = img_arr
-        self.render_image(img_arr)
+
 
     def render_image(self, img_arr):
         try:
@@ -205,14 +207,23 @@ class Display(tk.Frame):
         self.can.bind('<Motion>', lambda event: self.motion(event))
 
 class MainApplication(tk.Frame):
-
-    def save_NET_map(self, img, name):
+    def save_NET_map(self, img: np.array, name: str):
         base_name = ntpath.basename(self.in_egfp.get())
         cv2.imwrite(f"{base_name}/{name}.png", img, [cv2.IMWRITE_PNG_COMPRESSION, 0])
 
-    def update_egfp(self, sig):
-        self.arr = subtract_calc(self.arr, self.mid_erode.get())
-        self.areadisplay.render_image()
+    def update_sub(self):
+        self.arr = np.multiply(self.orig_arr, subtract_calc(self.dapi_arr, self.mid_erode.get()))
+        self.areadisplay.render_image(self.arr)
+    
+    def load_image(self, path, type: str):
+        if type == "egfp":
+            self.arr = np.array(Image.open(path))
+            self.orig_arr = np.array(self.arr)  
+            self.areadisplay.render_image(self.arr)
+        else: 
+            self.dapi_arr = np.array(Image.open(path))
+            self.update_sub()
+    
 
     def __init__(self, parent, *args, **kwargs):
         tk.Frame.__init__(self, parent, *args, **kwargs)
@@ -230,6 +241,8 @@ class MainApplication(tk.Frame):
 
         self.out_name.set("NET_scores")
 
+        self.orig_arr = None
+        self.dapi_arr = None
         self.arr = None
         self.zoom_arr = None
 
@@ -249,9 +262,9 @@ class MainApplication(tk.Frame):
         self.areadisplay.pack(side="left", expand=True, fill="both")
         self.zoomdisplay.pack(side="right", expand=True, fill="both")
 
-        self.in_egfp.trace_add("write", lambda n, i, d: self.areadisplay.load_image(self.in_egfp.get()))
-        self.in_dapi.trace_add("write", lambda n, i, d: self.update_egfp())
-
+        self.in_egfp.trace_add("write", lambda n, i, d: self.load_image(self.in_egfp.get(), "egfp"))
+        self.in_dapi.trace_add("write", lambda n, i, d: self.load_image(self.in_dapi.get(), "dapi"))
+        self.mid_erode.trace_add("write", lambda n, i, d: self.update_sub())
 drag_id = None
 window_width, window_height = 0, 0
 
