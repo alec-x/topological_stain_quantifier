@@ -30,14 +30,16 @@ def subtract_calc(arr, num_erodes, sigma=10):
     subtraction = ndi.binary_dilation(subtraction.astype(np.uint8), iterations=num_erodes)
     subtraction = 1 - subtraction
     subtraction = cv2.resize(subtraction.astype(np.float), dsize=orig_size, interpolation=cv2.INTER_CUBIC)
+    print('\n Middle subtraction calculations complete')
     return subtraction
 
 def adaptive_threshold(arr, dia):
+    print("\nCalculating adaptive thresholding")
     new_arr = np.zeros_like(arr)
 
     sample_area = dia
     s_len = int(sample_area/2)
-    print("\nCalculating adaptive thresholding")
+    
     for i in range(s_len,arr.shape[0], sample_area):
         for j in range(s_len,arr.shape[1], sample_area):
             curr_area = arr[i-s_len:i+s_len, j-s_len:j+s_len]
@@ -59,7 +61,9 @@ def threshold(arr, low, high):
     return filtered_arr
 
 def sum_px(arr, num_divs):
+    print("Calculating NET Score in target blocks")
     targ_div = (int(arr.shape[0]/num_divs), int(arr.shape[1]/num_divs))
+    print("NET Score calculations complete")
     return block_reduce(arr, targ_div, np.sum)
 
 class PathBar(tk.Frame):
@@ -203,6 +207,18 @@ class Display(tk.Frame):
 
         self.can.bind('<Motion>', lambda event: self.motion(event))
 
+class ScoreBar(tk.Frame):
+    def __init__(self, parent, *args, **kwargs):
+        tk.Frame.__init__(self, parent, *args, **kwargs)
+        self.score_lbl = tk.Label(self, text="NET Score:")
+        self.score_num_lbl = tk.Label(self, textvariable=parent.curr_score, width=20)
+        self.update_btn = tk.Button(self, text="Calculate", width=20)
+
+        self.score_lbl.pack(side="left")
+        self.score_num_lbl.pack(side="left")
+        self.score_num_lbl.configure(relief="groove", bd=2, background="#28c5e0")
+        self.update_btn.pack(side="right")
+
 class MainApplication(tk.Frame):
 
     def switch_zoom(self):
@@ -284,7 +300,8 @@ class MainApplication(tk.Frame):
         self.low = tk.IntVar(self)
         self.high = tk.IntVar(self)
         self.max = tk.IntVar(self)
-
+        self.curr_score = tk.IntVar(self)
+        
         self.out_name.set("NET_scores")
 
         self.orig_arr = None
@@ -300,18 +317,18 @@ class MainApplication(tk.Frame):
         self.varsliders = SlidersBar(self)
         self.areadisplay = Display(self)
         self.zoomdisplay = Display(self)
-        
+        self.scorebar = ScoreBar(self)
 
         self.pathbar.pack(side="top", fill="x")
         self.savebar.pack(side="top", fill="x") 
         self.varsliders.pack(side="top", fill="x")
-
+        self.scorebar.pack(side="top", fill="x")
         self.areadisplay.pack(side="left", expand=True, fill="both")
         self.zoomdisplay.pack(side="right", expand=True, fill="both")
 
         self.in_egfp.trace_add("write", lambda n, i, d: self.load_image(self.in_egfp.get(), "egfp"))
         self.in_dapi.trace_add("write", lambda n, i, d: self.load_image(self.in_dapi.get(), "dapi"))
-        self.mid_erode.trace_add("write", lambda n, i, d: self.update_all())
+        self.scorebar.update_btn.bind("<ButtonPress-1>", lambda event: self.update_all())
         self.num_divs.trace_add("write", lambda n, i, d: self.update_grid())
         self.max.trace_add("write", lambda n, i, d: self.update_grid())
         self.areadisplay.can.bind("<ButtonPress-1>", lambda event: self.switch_zoom())
