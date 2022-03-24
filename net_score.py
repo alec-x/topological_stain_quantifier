@@ -219,6 +219,13 @@ class MainApplication(tk.Frame):
        
         self.areadisplay.render_image(normalize_arb(self.block_arr, self.max.get()))
         self.areadisplay.can.create_rectangle(x-x_spc, y-y_spc, x+x_spc, y+y_spc,outline="orange")
+        
+        x_big = int(self.areadisplay.x / x_max * self.arr.shape[0])
+        y_big = int(self.areadisplay.y / y_max * self.arr.shape[1])
+        x_spc = int(x_spc * self.filter_arr.shape[0] / x_max)
+        y_spc = int(y_spc * self.filter_arr.shape[1] / y_max)
+
+        self.zoomdisplay.render_image(self.filter_arr[y_big-y_spc:y_big+y_spc, x_big-x_spc:x_big+x_spc])
 
     def save_NET_map(self, img: np.array, name: str):
         base_name = ntpath.basename(self.in_egfp.get())
@@ -226,10 +233,11 @@ class MainApplication(tk.Frame):
 
     def update_all(self):
         # This is nested to attempt to make it all a bit faster . . .
-        self.arr = threshold(
-            adaptive_threshold(
+        self.filter_arr = adaptive_threshold(
             np.multiply(self.orig_arr, subtract_calc(self.dapi_arr, self.mid_erode.get())), 
-            self.adapt_dia.get()),self.low.get(), self.high.get())
+            self.adapt_dia.get())
+
+        self.arr = threshold(self.filter_arr, self.low.get(), self.high.get())
         
         self.update_grid()
 
@@ -283,7 +291,7 @@ class MainApplication(tk.Frame):
         self.dapi_arr = None
         self.arr = None
         self.block_arr = None
-        self.zoom_arr = None
+        self.filter_arr = None
 
         self.parent = parent
 
