@@ -24,9 +24,16 @@ called a neutrophil extracellular trap
 
 - Only needs to be relatively correct. No need for exact quantities
     - More NET = higher number, less NET = lower number
+- Put scanning window as parameter as well
 Green stain:
-- high brightness, high NET
-    - low granularity, high NET
-- Red stain:
-    - normalize to topological map of red stain
-        - Use gaussian/median to smooth?
+- low brightness (still higher than background) high nets
+- Remove all granular spots and measure brightness for NET
+    - Put in threshold slider for easy adjustment
+- remove background (give threshold subtraction)
+    - do adaptive background removal
+    - Some NET regions have lower background than high-background regions
+- Blue stain:
+    - Use to remove blot in green
+    - Does not have to be very accurate
+    - Zero values in this region
+    - add parameter for thresholding
