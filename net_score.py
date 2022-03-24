@@ -242,6 +242,7 @@ class MainApplication(tk.Frame):
         y_spc = int(y_spc * self.filter_arr.shape[1] / y_max)
 
         self.zoomdisplay.render_image(self.filter_arr[y_big-y_spc:y_big+y_spc, x_big-x_spc:x_big+x_spc])
+        self.update_net_score()
 
     def save_NET_map(self, img: np.array, name: str):
         base_name = ntpath.basename(self.in_egfp.get())
@@ -284,6 +285,13 @@ class MainApplication(tk.Frame):
                 self.update_all()
         except AttributeError:
             pass
+
+    def update_net_score(self):
+        x, y = self.areadisplay.x, self.areadisplay.y
+        x_dis, y_dis = self.areadisplay.can.winfo_width(), self.areadisplay.can.winfo_height()
+        x_max, y_max = self.block_arr.shape
+        x_ind, y_ind = int(x / x_dis * x_max), int(y / y_dis * y_max)
+        self.curr_score.set(self.block_arr[y_ind, x_ind])
 
 
     def __init__(self, parent, *args, **kwargs):
@@ -338,7 +346,7 @@ window_width, window_height = 0, 0
 
 if __name__ == "__main__":
     root = tk.Tk()
-    root.title("Manual Cell Selection Utility")
+    root.title("NET Score Browser")
     root.minsize(1200, 900)
     main_app = MainApplication(root)
     main_app.pack(side="top", fill="both", expand=True)
