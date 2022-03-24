@@ -1,5 +1,4 @@
 # https://stackoverflow.com/questions/17466561/best-way-to-structure-a-tkinter-application
-from multiprocessing.sharedctypes import Value
 import numpy as np
 from PIL import ImageTk, Image
 Image.MAX_IMAGE_PIXELS = None
@@ -9,7 +8,7 @@ import cv2
 import ntpath
 import scipy.ndimage as ndi
 from skimage.measure import block_reduce
-import matplotlib.pyplot as plt
+
 XPAD = 8
 YPAD = 4
 IMAGE_SIZE = 96
