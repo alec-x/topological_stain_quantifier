@@ -16,11 +16,11 @@ IMAGE_SIZE = 96
 def normalize255(img):
     return img/np.max(img)*255
 
-def normalize1(img):
-    return (img/np.max(img)).astype(np.float)
+def normalize_arb(img, max):
+    return (img/max).astype(np.uint8)
 
 def subtract_calc(arr, num_erodes, sigma=10):
-    print('calculating middle subtraction')
+    print('\nCalculating middle subtraction')
     orig_size = arr.shape
     subtraction = cv2.resize(arr, dsize=(1024, 1024), interpolation=cv2.INTER_CUBIC)
     subtraction = ndi.gaussian_filter(subtraction, sigma)
@@ -37,6 +37,7 @@ def adaptive_threshold(arr, dia):
 
     sample_area = dia
     s_len = int(sample_area/2)
+    print("\nCalculating adaptive thresholding")
     for i in range(s_len,arr.shape[0], sample_area):
         for j in range(s_len,arr.shape[1], sample_area):
             curr_area = arr[i-s_len:i+s_len, j-s_len:j+s_len]
@@ -45,18 +46,20 @@ def adaptive_threshold(arr, dia):
             curr_area[curr_area < 0] = 0
             new_arr[i-s_len:i+s_len, j-s_len:j+s_len] = curr_area
         print(f"Processing {i/arr.shape[0]:.2%}", end='\r')
-
+    print("\nAdapative thresholding complete")
     return new_arr
 
 def threshold(arr, low, high):
+    print("\nCalculating final thresholds")
     filtered_arr = normalize255(np.array(arr))
     filtered_arr[filtered_arr < low] = 0
     filtered_arr[filtered_arr > high] = 0
-    return threshold
+    filtered_arr[filtered_arr > 0] = 1
+    print("\nFinal thresholds complete")
+    return filtered_arr
 
 def sum_px(arr, num_divs):
-    arr[arr > 0] = 1
-    targ_div = (arr.shape[0]/num_divs, arr.shape[1]/num_divs)
+    targ_div = (int(arr.shape[0]/num_divs), int(arr.shape[1]/num_divs))
     return block_reduce(arr, targ_div, np.sum)
 
 class PathBar(tk.Frame):
@@ -154,7 +157,8 @@ class SlidersBar(tk.Frame):
         self.adapt_sld = SimpleSlider(self, "Adaptive Background Removal Dia.", (50, 1000), 5, parent.adapt_dia, 100)
         self.low_sld = SimpleSlider(self, "Px Value Lim (low)", (0, 254), 1, parent.low, 6)
         self.high_sld = SimpleSlider(self, "Px Value Lim (high)", (1, 255), 1, parent.high, 30)
-        
+        self.max_sld = SimpleSlider(self, "Scale (highest)", (100, 1000), 5, parent.max, 255)
+
         self.grid_line_sld.grid(column=0, row=0, sticky="ew", columnspan=2)
         self.mid_erode_sld.grid(column=0, row=1, sticky="ew", columnspan=2)
         self.adapt_sld.grid(column=0, row=2, sticky="ew", columnspan=2)
@@ -162,14 +166,14 @@ class SlidersBar(tk.Frame):
         self.low_sld.configure(relief="raised", bd=2)
         self.high_sld.grid(column=1, row=3, sticky="ew")
         self.high_sld.configure(relief="raised", bd=2)
-        
+        self.max_sld.grid(column=0, row=4, sticky="ew", columnspan=2)
+
         self.columnconfigure(0, weight=1)
         self.columnconfigure(1, weight=1)
 
 class Display(tk.Frame):
     def motion(self, event):
-        self.can.x, self.can.y = event.x, event.y
-
+        self.x, self.y = event.x, event.y
 
     def render_image(self, img_arr):
         try:
@@ -179,25 +183,19 @@ class Display(tk.Frame):
             pass
                 
         can = self.can
-        real_height, real_width = img_arr.shape
         disp_width = can.winfo_width()
         disp_height = can.winfo_height()
 
         img =  Image.fromarray(img_arr)
-        img = img.resize((disp_width, disp_height))
+        img = img.resize((disp_width, disp_height), resample=Image.NEAREST)
         can.delete("all")
         can.image = ImageTk.PhotoImage(img)
         can.create_image((0,0), image=can.image, anchor="nw")
-        ratio_vert = disp_width / real_width
-        ratio_horz = disp_height / real_height
-        self.horz_ratio.set(ratio_horz)
-        self.vert_ratio.set(ratio_vert)
 
     def __init__(self, parent, *args, **kwargs):
         tk.Frame.__init__(self, parent, *args, **kwargs)
-        self.horz_ratio = tk.DoubleVar(self)
-        self.vert_ratio = tk.DoubleVar(self)
-
+        self.x = 0
+        self.y = 0
         self.parent = parent
         self.can = tk.Canvas(self, bg='white')
         self.can.image = None
@@ -206,23 +204,63 @@ class Display(tk.Frame):
         self.can.bind('<Motion>', lambda event: self.motion(event))
 
 class MainApplication(tk.Frame):
+
+    def switch_zoom(self):
+        try:
+            if not self.block_arr:
+                return
+        except ValueError:
+            pass
+
+        x_max, y_max = self.areadisplay.can.winfo_width(), self.areadisplay.can.winfo_height()
+        x_spc = x_max/self.num_divs.get()/2
+        y_spc = y_max/self.num_divs.get()/2
+        x, y = self.areadisplay.x, self.areadisplay.y
+       
+        self.areadisplay.render_image(normalize_arb(self.block_arr, self.max.get()))
+        self.areadisplay.can.create_rectangle(x-x_spc, y-y_spc, x+x_spc, y+y_spc,outline="orange")
+
     def save_NET_map(self, img: np.array, name: str):
         base_name = ntpath.basename(self.in_egfp.get())
         cv2.imwrite(f"{base_name}/{name}.png", img, [cv2.IMWRITE_PNG_COMPRESSION, 0])
 
-    def update_sub(self):
-        self.arr = np.multiply(self.orig_arr, subtract_calc(self.dapi_arr, self.mid_erode.get()))
-        self.areadisplay.render_image(self.arr)
-    
+    def update_all(self):
+        # This is nested to attempt to make it all a bit faster . . .
+        self.arr = threshold(
+            adaptive_threshold(
+            np.multiply(self.orig_arr, subtract_calc(self.dapi_arr, self.mid_erode.get())), 
+            self.adapt_dia.get()),self.low.get(), self.high.get())
+        
+        self.update_grid()
+
+    def update_grid(self):
+        self.block_arr = sum_px(self.arr, self.num_divs.get())
+        self.areadisplay.render_image(normalize_arb(self.block_arr, self.max.get()))
+
     def load_image(self, path, type: str):
-        if type == "egfp":
-            self.arr = np.array(Image.open(path))
-            self.orig_arr = np.array(self.arr)  
-            self.areadisplay.render_image(self.arr)
-        else: 
-            self.dapi_arr = np.array(Image.open(path))
-            self.update_sub()
-    
+        try:
+            if type == "egfp":
+                self.arr = np.array(Image.open(path))
+                
+                len_x, len_y = self.arr.shape
+                trim_x = int(len_x/20)
+                trim_y = int(len_y/20)
+                self.arr = self.arr[trim_x:len_x-trim_x, trim_y:len_y-trim_y]
+                self.orig_arr = np.array(self.arr)  
+                if not self.dapi_arr:
+                    self.areadisplay.render_image(self.arr)
+                
+            else: 
+                self.dapi_arr = np.array(Image.open(path))
+                len_x, len_y = self.dapi_arr.shape
+                trim_x = int(len_x/20)
+                trim_y = int(len_y/20)
+                self.dapi_arr = self.dapi_arr[trim_x:len_x-trim_x, trim_y:len_y-trim_y]
+                
+                self.update_all()
+        except AttributeError:
+            pass
+
 
     def __init__(self, parent, *args, **kwargs):
         tk.Frame.__init__(self, parent, *args, **kwargs)
@@ -237,12 +275,14 @@ class MainApplication(tk.Frame):
         self.adapt_dia = tk.IntVar(self)
         self.low = tk.IntVar(self)
         self.high = tk.IntVar(self)
+        self.max = tk.IntVar(self)
 
         self.out_name.set("NET_scores")
 
         self.orig_arr = None
         self.dapi_arr = None
         self.arr = None
+        self.block_arr = None
         self.zoom_arr = None
 
         self.parent = parent
@@ -263,7 +303,11 @@ class MainApplication(tk.Frame):
 
         self.in_egfp.trace_add("write", lambda n, i, d: self.load_image(self.in_egfp.get(), "egfp"))
         self.in_dapi.trace_add("write", lambda n, i, d: self.load_image(self.in_dapi.get(), "dapi"))
-        self.mid_erode.trace_add("write", lambda n, i, d: self.update_sub())
+        self.mid_erode.trace_add("write", lambda n, i, d: self.update_all())
+        self.num_divs.trace_add("write", lambda n, i, d: self.update_grid())
+        self.max.trace_add("write", lambda n, i, d: self.update_grid())
+        self.areadisplay.can.bind("<ButtonPress-1>", lambda event: self.switch_zoom())
+
 drag_id = None
 window_width, window_height = 0, 0
 
@@ -303,7 +347,7 @@ if __name__ == "__main__":
                 root.after_cancel(drag_id)
             
             # schedule stop_drag
-            drag_id = root.after(500, stop_drag)    
+            drag_id = root.after(1000, stop_drag)    
 
 
     root.bind('<Configure>', dragging)
