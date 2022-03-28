@@ -158,12 +158,12 @@ class SlidersBar(tk.Frame):
     def __init__(self, parent, *args, **kwargs):
         tk.Frame.__init__(self, parent, *args, **kwargs)
         self.parent = parent
-        self.grid_line_sld = SimpleSlider(self, "Num Grid Lines", (10,1000),5,parent.num_divs,100)
+        self.grid_line_sld = SimpleSlider(self, "Num Grid Lines", (10,400),5,parent.num_divs,60)
         self.mid_erode_sld = SimpleSlider(self, "Middle Erosion", (0, 100), 1, parent.mid_erode, 20)
         self.adapt_sld = SimpleSlider(self, "Adaptive Background Removal Dia.", (50, 1000), 5, parent.adapt_dia, 100)
         self.low_sld = SimpleSlider(self, "Px Value Lim (low)", (0, 254), 1, parent.low, 6)
         self.high_sld = SimpleSlider(self, "Px Value Lim (high)", (1, 255), 1, parent.high, 30)
-        self.max_sld = SimpleSlider(self, "Scale (highest)", (100, 1000), 5, parent.max, 255)
+        self.max_sld = SimpleSlider(self, "Scale (highest)", (100, 20000), 100, parent.max, 1000)
 
         self.grid_line_sld.grid(column=0, row=0, sticky="ew", columnspan=2)
         self.mid_erode_sld.grid(column=0, row=1, sticky="ew", columnspan=2)
@@ -257,7 +257,7 @@ class MainApplication(tk.Frame):
             self.adapt_dia.get())
 
         self.arr = threshold(self.filter_arr, self.low.get(), self.high.get())
-        
+        self.max.set(np.max(sum_px(self.arr, self.num_divs.get())))
         self.update_grid()
 
     def update_grid(self):
