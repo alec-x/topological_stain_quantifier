@@ -55,7 +55,7 @@ def adaptive_threshold(arr, dia):
 
 def threshold(arr, low, high):
     print("\nCalculating final thresholds")
-    filtered_arr = normalize255(np.array(arr))
+    filtered_arr = np.array(arr)
     filtered_arr[filtered_arr < low] = 0
     filtered_arr[filtered_arr > high] = 0
     filtered_arr[filtered_arr > 0] = 1
@@ -64,7 +64,7 @@ def threshold(arr, low, high):
 
 def sum_px(arr, num_divs):
     print("Calculating NET Score in target blocks")
-    targ_div = (int(arr.shape[0]/num_divs), int(arr.shape[1]/num_divs))
+    targ_div = (arr.shape[0]//num_divs, arr.shape[1]//num_divs)
     print("NET Score calculations complete")
     return block_reduce(arr, targ_div, np.sum)
 
@@ -240,8 +240,8 @@ class MainApplication(tk.Frame):
         
         x_big = int(self.areadisplay.x / x_max * self.arr.shape[0])
         y_big = int(self.areadisplay.y / y_max * self.arr.shape[1])
-        x_spc = int(x_spc * self.filter_arr.shape[0] / x_max)
-        y_spc = int(y_spc * self.filter_arr.shape[1] / y_max)
+        x_spc = int(x_spc * self.filter_arr.shape[0] / x_max / 2)
+        y_spc = int(y_spc * self.filter_arr.shape[1] / y_max / 2)
 
         self.zoomdisplay.render_image(self.filter_arr[y_big-y_spc:y_big+y_spc, x_big-x_spc:x_big+x_spc])
         self.update_net_score()
