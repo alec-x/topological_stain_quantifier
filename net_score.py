@@ -293,7 +293,7 @@ class MainApplication(tk.Frame):
         x_dis, y_dis = self.areadisplay.can.winfo_width(), self.areadisplay.can.winfo_height()
         x_max, y_max = self.block_arr.shape
         x_ind, y_ind = int(x / x_dis * x_max), int(y / y_dis * y_max)
-        self.curr_score.set(self.block_arr[y_ind, x_ind])
+        self.curr_score.set(f'{self.block_arr[y_ind, x_ind]: .3f}')
 
 
     def __init__(self, parent, *args, **kwargs):
@@ -310,7 +310,7 @@ class MainApplication(tk.Frame):
         self.low = tk.IntVar(self)
         self.high = tk.IntVar(self)
         self.max = tk.IntVar(self)
-        self.curr_score = tk.IntVar(self)
+        self.curr_score = tk.StringVar(self)
         
         self.out_name.set("NET_scores")
 
