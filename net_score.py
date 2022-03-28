@@ -17,7 +17,9 @@ def normalize255(img):
     return img/np.max(img)*255
 
 def normalize_arb(img, max):
-    return (img/max).astype(np.uint8)
+    res = ((img/max)*255)
+    res[res > 255] = 255
+    return res.astype(np.uint8)
 
 def subtract_calc(arr, num_erodes, sigma=10):
     print('\nCalculating middle subtraction')
