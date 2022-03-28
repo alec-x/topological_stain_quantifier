@@ -252,7 +252,7 @@ class MainApplication(tk.Frame):
         self.update_grid()
 
     def update_grid(self):
-        self.block_arr = laplace_score(self.arr, self.num_divs.get())
+        self.block_arr = laplace_score(self.filter_arr, self.num_divs.get())
         self.areadisplay.render_image(normalize_arb(self.block_arr, self.max.get()))
 
     def load_image(self, path, type: str):
