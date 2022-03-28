@@ -297,8 +297,6 @@ class MainApplication(tk.Frame):
         self.num_divs = tk.IntVar(self)
         self.mid_erode = tk.IntVar(self)
         self.adapt_dia = tk.IntVar(self)
-        self.low = tk.IntVar(self)
-        self.high = tk.IntVar(self)
         self.max = tk.IntVar(self)
         self.curr_score = tk.StringVar(self)
         
