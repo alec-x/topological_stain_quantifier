@@ -252,9 +252,9 @@ class MainApplication(tk.Frame):
 
     def update_all(self):
         # This is nested to attempt to make it all a bit faster . . .
-        self.filter_arr = adaptive_threshold(
-            np.multiply(self.orig_arr, subtract_calc(self.dapi_arr, self.mid_erode.get())), 
-            self.adapt_dia.get())
+        self.filter_arr = np.multiply(
+            adaptive_threshold(self.orig_arr, self.adapt_dia.get()), 
+            subtract_calc(self.dapi_arr, self.mid_erode.get()))
 
         self.arr = threshold(self.filter_arr, self.low.get(), self.high.get())
         self.max.set(np.max(sum_px(self.arr, self.num_divs.get())))
