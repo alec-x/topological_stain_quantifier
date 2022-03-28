@@ -53,20 +53,19 @@ def adaptive_threshold(arr, dia):
     print("\nAdapative thresholding complete")
     return new_arr
 
-def threshold(arr, low, high):
-    print("\nCalculating final thresholds")
-    filtered_arr = normalize255(np.array(arr))
-    filtered_arr[filtered_arr < low] = 0
-    filtered_arr[filtered_arr > high] = 0
-    filtered_arr[filtered_arr > 0] = 1
-    print("\nFinal thresholds complete")
-    return filtered_arr
+def laplace_score(arr, zones):
+    print("\n Calculating laplacian score of zones")
+    blck_sz = (int(arr.shape[0] / zones), int(arr.shape[1] / zones))
+    new_arr = []
+    for ind_1, i in enumerate(range(int((arr.shape[0] % blck_sz[0])/2), arr.shape[0], blck_sz[0])):
+        new_arr.append([])
+        for j in range(int((arr.shape[1] % blck_sz[1])/2), arr.shape[1], blck_sz[1]):
+            curr_arr = arr[i:i+blck_sz[0], j:j+blck_sz[1]]
+            new_arr[ind_1].append(cv2.Laplacian(curr_arr, cv2.CV_64F).var())
+        print(f"Processing {i/arr.shape[0]:.2%}", end='\r')
+    print("\n finished laplacian calculations")
 
-def sum_px(arr, num_divs):
-    print("Calculating NET Score in target blocks")
-    targ_div = (int(arr.shape[0]/num_divs), int(arr.shape[1]/num_divs))
-    print("NET Score calculations complete")
-    return block_reduce(arr, targ_div, np.sum)
+    return np.array(new_arr)
 
 class PathBar(tk.Frame):
     def __browse_file(self, textbox):
@@ -158,20 +157,14 @@ class SlidersBar(tk.Frame):
     def __init__(self, parent, *args, **kwargs):
         tk.Frame.__init__(self, parent, *args, **kwargs)
         self.parent = parent
-        self.grid_line_sld = SimpleSlider(self, "Num Grid Lines", (10,1000),5,parent.num_divs,100)
+        self.grid_line_sld = SimpleSlider(self, "Num Grid Lines", (10,300),5,parent.num_divs,60)
         self.mid_erode_sld = SimpleSlider(self, "Middle Erosion", (0, 100), 1, parent.mid_erode, 20)
         self.adapt_sld = SimpleSlider(self, "Adaptive Background Removal Dia.", (50, 1000), 5, parent.adapt_dia, 100)
-        self.low_sld = SimpleSlider(self, "Px Value Lim (low)", (0, 254), 1, parent.low, 6)
-        self.high_sld = SimpleSlider(self, "Px Value Lim (high)", (1, 255), 1, parent.high, 30)
-        self.max_sld = SimpleSlider(self, "Scale (highest)", (100, 1000), 5, parent.max, 255)
+        self.max_sld = SimpleSlider(self, "Scale (highest)", (10, 100), 1, parent.max, 50)
 
         self.grid_line_sld.grid(column=0, row=0, sticky="ew", columnspan=2)
         self.mid_erode_sld.grid(column=0, row=1, sticky="ew", columnspan=2)
         self.adapt_sld.grid(column=0, row=2, sticky="ew", columnspan=2)
-        self.low_sld.grid(column=0, row=3, sticky="ew")
-        self.low_sld.configure(relief="raised", bd=2)
-        self.high_sld.grid(column=1, row=3, sticky="ew")
-        self.high_sld.configure(relief="raised", bd=2)
         self.max_sld.grid(column=0, row=4, sticky="ew", columnspan=2)
 
         self.columnconfigure(0, weight=1)
@@ -255,13 +248,10 @@ class MainApplication(tk.Frame):
         self.filter_arr = adaptive_threshold(
             np.multiply(self.orig_arr, subtract_calc(self.dapi_arr, self.mid_erode.get())), 
             self.adapt_dia.get())
-
-        self.arr = threshold(self.filter_arr, self.low.get(), self.high.get())
-        
         self.update_grid()
 
     def update_grid(self):
-        self.block_arr = sum_px(self.arr, self.num_divs.get())
+        self.block_arr = laplace_score(self.arr, self.num_divs.get())
         self.areadisplay.render_image(normalize_arb(self.block_arr, self.max.get()))
 
     def load_image(self, path, type: str):
