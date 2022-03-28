@@ -31,7 +31,7 @@ def subtract_calc(arr, num_erodes, sigma=10):
     subtraction[subtraction >= 50] = 1
     subtraction = ndi.binary_dilation(subtraction.astype(np.uint8), iterations=num_erodes)
     subtraction = 1 - subtraction
-    subtraction = cv2.resize(subtraction.astype(np.float), dsize=orig_size, interpolation=cv2.INTER_CUBIC)
+    subtraction = cv2.resize(subtraction.astype(float), dsize=orig_size, interpolation=cv2.INTER_CUBIC)
     print('\n Middle subtraction calculations complete')
     return subtraction
 
