@@ -185,9 +185,9 @@ class Display(tk.Frame):
         try:
             if img_arr == None:
                 return
-        except ValueError:
+        except ValueError as e:
             pass
-                
+   
         can = self.can
         disp_width = can.winfo_width()
         disp_height = can.winfo_height()
@@ -349,7 +349,7 @@ window_width, window_height = 0, 0
 if __name__ == "__main__":
     root = tk.Tk()
     root.title("NET Score Browser")
-    root.minsize(1200, 900)
+    root.minsize(700, 500)
     main_app = MainApplication(root)
     main_app.pack(side="top", fill="both", expand=True)
 
