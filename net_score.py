@@ -233,8 +233,8 @@ class MainApplication(tk.Frame):
         
         x_big = int(self.areadisplay.x / x_max * self.arr.shape[0])
         y_big = int(self.areadisplay.y / y_max * self.arr.shape[1])
-        x_spc = int(x_spc * self.filter_arr.shape[0] / x_max)
-        y_spc = int(y_spc * self.filter_arr.shape[1] / y_max)
+        x_spc = int(x_spc * self.filter_arr.shape[0] / x_max / 2)
+        y_spc = int(y_spc * self.filter_arr.shape[1] / y_max / 2)
 
         self.zoomdisplay.render_image(self.filter_arr[y_big-y_spc:y_big+y_spc, x_big-x_spc:x_big+x_spc])
         self.update_net_score()
@@ -245,9 +245,10 @@ class MainApplication(tk.Frame):
 
     def update_all(self):
         # This is nested to attempt to make it all a bit faster . . .
-        self.filter_arr = adaptive_threshold(
-            np.multiply(self.orig_arr, subtract_calc(self.dapi_arr, self.mid_erode.get())), 
-            self.adapt_dia.get())
+        self.filter_arr = np.multiply(
+            adaptive_threshold(self.orig_arr, self.adapt_dia.get()), 
+            subtract_calc(self.dapi_arr, self.mid_erode.get()))
+            
         self.update_grid()
 
     def update_grid(self):
