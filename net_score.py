@@ -138,9 +138,9 @@ class SimpleSlider(tk.Frame):
         self.sld = tk.Scale(self, 
                     from_=lims[0],to=lims[1], resolution=res, 
                     orient=tk.HORIZONTAL, 
-                    showvalue=0)
+                    showvalue=0,
+                    variable=sld_var)
         self.sld_txt = tk.Label(self, textvariable=sld_var)
-        self.sld.bind("<ButtonRelease-1>", self.updateValue)
         
         self.sld_lbl.grid(column=0, row=0, sticky="w")
         self.sld.grid(column=1, row=0, sticky="ew")
@@ -363,8 +363,6 @@ class MainApplication(tk.Frame):
         self.in_egfp.trace_add("write", lambda n, i, d: self.load_image(self.in_egfp.get(), "egfp"))
         self.in_dapi.trace_add("write", lambda n, i, d: self.load_image(self.in_dapi.get(), "dapi"))
         self.scorebar.update_btn.bind("<ButtonPress-1>", lambda event: self.update_all())
-        self.num_divs.trace_add("write", lambda n, i, d: self.update_grid())
-        self.max.trace_add("write", lambda n, i, d: self.update_grid())
         self.areadisplay.can.bind("<ButtonPress-1>", lambda event: self.update_net_score())
         self.savebar.save_btn.bind("<ButtonPress-1>", lambda event: self.save_NET_map())
 
@@ -374,7 +372,8 @@ window_width, window_height = 0, 0
 if __name__ == "__main__":
     root = tk.Tk()
     root.title("NET Score Browser")
-    root.minsize(600, 800)
+    root.minsize(600, 700)
+    root.geometry("800x900")
     main_app = MainApplication(root)
     main_app.pack(side="top", fill="both", expand=True)
 
