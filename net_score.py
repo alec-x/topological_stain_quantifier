@@ -161,10 +161,11 @@ class SlidersBar(tk.Frame):
         self.grid_line_sld = SimpleSlider(self, "Num Grid Lines", (10,400),5,parent.num_divs,60)
         self.mid_erode_sld = SimpleSlider(self, "Middle Erosion", (0, 100), 1, parent.mid_erode, 20)
         self.adapt_sld = SimpleSlider(self, "Adaptive Background Removal Dia.", (50, 1000), 5, parent.adapt_dia, 100)
+        
         self.low_sld = SimpleSlider(self, "Px Value Lim (low)", (0, 254), 1, parent.low, 6)
         self.high_sld = SimpleSlider(self, "Px Value Lim (high)", (1, 255), 1, parent.high, 30)
-        self.max_sld = SimpleSlider(self, "Scale (highest)", (100, 20000), 100, parent.max, 1000)
-
+        self.max_sld = SimpleSlider(self, "Scale (highest)", (0, 1), 0.01, parent.max, 1)
+        
         self.grid_line_sld.grid(column=0, row=0, sticky="ew", columnspan=2)
         self.mid_erode_sld.grid(column=0, row=1, sticky="ew", columnspan=2)
         self.adapt_sld.grid(column=0, row=2, sticky="ew", columnspan=2)
@@ -359,7 +360,7 @@ window_width, window_height = 0, 0
 if __name__ == "__main__":
     root = tk.Tk()
     root.title("NET Score Browser")
-    root.minsize(700, 500)
+    root.minsize(600, 800)
     main_app = MainApplication(root)
     main_app.pack(side="top", fill="both", expand=True)
 
