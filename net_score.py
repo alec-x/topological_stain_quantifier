@@ -5,8 +5,8 @@ Image.MAX_IMAGE_PIXELS = None
 import tkinter as tk
 from tkinter import filedialog
 import cv2
-import ntpath
 import scipy.ndimage as ndi
+from scipy.io import savemat
 from skimage.measure import block_reduce
 
 XPAD = 8
@@ -258,9 +258,21 @@ class MainApplication(tk.Frame):
         self.curr_score.set(f'{self.block_arr[y_ind, x_ind]: .3f}')
         self.curr_score_tot.set(f'{self.block_arr[y_ind, x_ind]*div_area: .3f}')
 
-    def save_NET_map(self, img: np.array, name: str):
-        base_name = ntpath.basename(self.in_egfp.get())
-        cv2.imwrite(f"{base_name}/{name}.png", img, [cv2.IMWRITE_PNG_COMPRESSION, 0])
+    def save_NET_map(self):
+        print("Saving topological map and matlab file")
+        cv2.imwrite(f"{self.out_path}/{self.out_name}.png", self.block_arr, [cv2.IMWRITE_PNG_COMPRESSION, 0])
+        num_divs = self.num_divs.get()
+        div_area = (self.arr.shape[0] // num_divs) * (self.arr.shape[1] // num_divs)
+        savedict = {"per_area": self.block_arr*div_area,
+                    "per_px": self.block_arr,
+                    "dense_norm_per_area:": "currently unavailable",
+                    "dense_norm_per_px:": "currently unavailable",
+                    "area_px": div_area,
+                    "num_divs": num_divs,
+                    "total_px_width": self.arr.shape[0],
+                    "total_px_length": self.arr.shape[1]}
+        savemat(f"{self.out_path}/{self.out_name}.mat", savedict)
+        print("Finished saving")
 
     def update_all(self):
         # This is nested to attempt to make it all a bit faster . . .
@@ -350,6 +362,7 @@ class MainApplication(tk.Frame):
         self.num_divs.trace_add("write", lambda n, i, d: self.update_grid())
         self.max.trace_add("write", lambda n, i, d: self.update_grid())
         self.areadisplay.can.bind("<ButtonPress-1>", lambda event: self.update_net_score())
+        self.savebar.save_btn.bind("<ButtonPress-1>", lambda event: self.save_NET_map())
 
 drag_id = None
 window_width, window_height = 0, 0
