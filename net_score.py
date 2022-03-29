@@ -35,7 +35,7 @@ def subtract_calc(arr, num_erodes, sigma=10):
     print('\n Middle subtraction calculations complete')
     return subtraction
 
-def adaptive_threshold(arr, dia):
+def adaptive_threshold(arr, dia, pct):
     print("\nCalculating adaptive thresholding")
     new_arr = np.zeros_like(arr)
 
@@ -45,7 +45,7 @@ def adaptive_threshold(arr, dia):
     for i in range(s_len,arr.shape[0], sample_area):
         for j in range(s_len,arr.shape[1], sample_area):
             curr_area = arr[i-s_len:i+s_len, j-s_len:j+s_len]
-            background = np.percentile(curr_area, 0.5)
+            background = np.percentile(curr_area, pct)
             curr_area = curr_area - background
             curr_area[curr_area < 0] = 0
             new_arr[i-s_len:i+s_len, j-s_len:j+s_len] = curr_area
@@ -161,7 +161,7 @@ class SlidersBar(tk.Frame):
         self.grid_line_sld = SimpleSlider(self, "Num Grid Lines", (10,400),5,parent.num_divs,60)
         self.mid_erode_sld = SimpleSlider(self, "Middle Erosion", (0, 100), 1, parent.mid_erode, 20)
         self.adapt_sld = SimpleSlider(self, "Adaptive Background Removal Dia.", (50, 1000), 5, parent.adapt_dia, 100)
-        
+        self.adapd_sld_pct = SimpleSlider(self, "Adaptive Background Removal pct", (0, 10), 0.1, parent.adapt_pct, 0.5)
         self.low_sld = SimpleSlider(self, "Px Value Lim (low)", (0, 254), 1, parent.low, 6)
         self.high_sld = SimpleSlider(self, "Px Value Lim (high)", (1, 255), 1, parent.high, 30)
         self.max_sld = SimpleSlider(self, "Scale (highest)", (0, 1), 0.01, parent.max, 1)
@@ -169,11 +169,13 @@ class SlidersBar(tk.Frame):
         self.grid_line_sld.grid(column=0, row=0, sticky="ew", columnspan=2)
         self.mid_erode_sld.grid(column=0, row=1, sticky="ew", columnspan=2)
         self.adapt_sld.grid(column=0, row=2, sticky="ew", columnspan=2)
-        self.low_sld.grid(column=0, row=3, sticky="ew")
+        self.adapd_sld_pct.grid(column=0, row=3, sticky="ew", columnspan=2)
+
+        self.low_sld.grid(column=0, row=4, sticky="ew")
         self.low_sld.configure(relief="raised", bd=2)
-        self.high_sld.grid(column=1, row=3, sticky="ew")
+        self.high_sld.grid(column=1, row=4, sticky="ew")
         self.high_sld.configure(relief="raised", bd=2)
-        self.max_sld.grid(column=0, row=4, sticky="ew", columnspan=2)
+        self.max_sld.grid(column=0, row=5, sticky="ew", columnspan=2)
 
         self.columnconfigure(0, weight=1)
         self.columnconfigure(1, weight=1)
@@ -277,7 +279,7 @@ class MainApplication(tk.Frame):
     def update_all(self):
         # This is nested to attempt to make it all a bit faster . . .
         self.filter_arr = np.multiply(
-            adaptive_threshold(self.orig_arr, self.adapt_dia.get()), 
+            adaptive_threshold(self.orig_arr, self.adapt_dia.get(), self.adapt_pct.get()), 
             subtract_calc(self.dapi_arr, self.mid_erode.get()))
 
         self.arr = threshold(self.filter_arr, self.low.get(), self.high.get())
@@ -327,6 +329,8 @@ class MainApplication(tk.Frame):
         self.num_divs = tk.IntVar(self)
         self.mid_erode = tk.IntVar(self)
         self.adapt_dia = tk.IntVar(self)
+        self.adapt_pct = tk.DoubleVar(self)
+
         self.low = tk.IntVar(self)
         self.high = tk.IntVar(self)
         self.max = tk.DoubleVar(self)
@@ -378,11 +382,6 @@ if __name__ == "__main__":
         global drag_id
         try:
             main_app.areadisplay.render_image(main_app.arr)
-        except TypeError:
-            pass
-
-        try:
-            main_app.zoomdisplay.render_image(main_app.arr[500:1000, 500:1000])
         except TypeError:
             pass
 
