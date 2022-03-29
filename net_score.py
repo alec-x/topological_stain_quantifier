@@ -212,18 +212,27 @@ class Display(tk.Frame):
 class ScoreBar(tk.Frame):
     def __init__(self, parent, *args, **kwargs):
         tk.Frame.__init__(self, parent, *args, **kwargs)
-        self.score_lbl = tk.Label(self, text="NET Score:")
-        self.score_num_lbl = tk.Label(self, textvariable=parent.curr_score, width=20)
-        self.update_btn = tk.Button(self, text="Calculate", width=20)
+        self.score_lbl = tk.Label(self, text="NET Score/pixel:")
+        self.score_num_lbl = tk.Label(self, textvariable=parent.curr_score, width=15)
+
+        self.score_tot_lbl = tk.Label(self, text="NET Score/block:")
+        self.score_num_tot_lbl = tk.Label(self, textvariable=parent.curr_score_tot, width=15)
+
+        self.update_btn = tk.Button(self, text="Calculate", width=10)
 
         self.score_lbl.pack(side="left")
         self.score_num_lbl.pack(side="left")
         self.score_num_lbl.configure(relief="groove", bd=2, background="#28c5e0")
+        
+        self.score_tot_lbl.pack(side="left")
+        self.score_num_tot_lbl.pack(side="left")
+        self.score_num_tot_lbl.configure(relief="groove", bd=2, background="#eb9b34")
+
         self.update_btn.pack(side="right")
 
 class MainApplication(tk.Frame):
 
-    def switch_zoom(self):
+    def update_net_score(self):
         try:
             if not self.block_arr:
                 return
@@ -309,8 +318,9 @@ class MainApplication(tk.Frame):
         self.adapt_dia = tk.IntVar(self)
         self.low = tk.IntVar(self)
         self.high = tk.IntVar(self)
-        self.max = tk.IntVar(self)
+        self.max = tk.DoubleVar(self)
         self.curr_score = tk.StringVar(self)
+        self.curr_score_tot = tk.StringVar(self)
         
         self.out_name.set("NET_scores")
 
