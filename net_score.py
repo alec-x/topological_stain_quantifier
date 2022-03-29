@@ -16,6 +16,9 @@ IMAGE_SIZE = 96
 def normalize255(img):
     return img/np.max(img)*255
 
+def normalize1(img):
+    return img/np.max(img)
+    
 def normalize_arb(img, max):
     res = ((img/max)*255)
     res[res > 255] = 255
@@ -63,9 +66,9 @@ def threshold(arr, low, high):
     return filtered_arr
 
 def sum_px(arr, num_divs):
-    print("Calculating NET Score in target blocks")
+    print("Calculating Score in target blocks")
     targ_div = (arr.shape[0]//num_divs, arr.shape[1]//num_divs)
-    print("NET Score calculations complete")
+    print("Score calculations complete")
     return block_reduce(arr, targ_div, np.sum)
 
 class PathBar(tk.Frame):
@@ -98,7 +101,7 @@ class PathBar(tk.Frame):
 
         in_egfp_txt.bind("<ButtonPress-1>", lambda event: self.__browse_file(in_egfp_txt))
         in_dapi_txt.bind("<ButtonPress-1>", lambda event: self.__browse_file(in_dapi_txt))
-        in_dapi_txt.bind("<ButtonPress-1>", lambda event: self.__browse_file(in_cy5_txt))
+        in_cy5_txt.bind("<ButtonPress-1>", lambda event: self.__browse_file(in_cy5_txt))
 
 class SaveBar(tk.Frame):
     def __browse_folder(self, textbox):
@@ -222,23 +225,43 @@ class Display(tk.Frame):
 class ScoreBar(tk.Frame):
     def __init__(self, parent, *args, **kwargs):
         tk.Frame.__init__(self, parent, *args, **kwargs)
-        self.score_lbl = tk.Label(self, text="NET Score/pixel:")
-        self.score_num_lbl = tk.Label(self, textvariable=parent.curr_score, width=15)
+        self.score_lbl_0 = tk.Label(self, text="Score/pixel:")
+        self.score_lbl_1 = tk.Label(self, textvariable=parent.curr_score, width=20)
 
-        self.score_tot_lbl = tk.Label(self, text="NET Score/block:")
-        self.score_num_tot_lbl = tk.Label(self, textvariable=parent.curr_score_tot, width=15)
+        self.score_blk_lbl_0 = tk.Label(self, text="Score/block:")
+        self.score_blk_lbl_1 = tk.Label(self, textvariable=parent.curr_score_tot, width=20)
 
-        self.update_btn = tk.Button(self, text="Calculate", width=10)
+        self.score_norm_lbl_0 = tk.Label(self, text="Score/px normed:")
+        self.score_norm_lbl_1 = tk.Label(self, textvariable=parent.curr_score_norm, width=20)
 
-        self.score_lbl.pack(side="left")
-        self.score_num_lbl.pack(side="left")
-        self.score_num_lbl.configure(relief="groove", bd=2, background="#28c5e0")
+        self.score_blk_norm_lbl_0 = tk.Label(self, text="Score/blk normed:")
+        self.score_blk_norm_lbl_1 = tk.Label(self, textvariable=parent.curr_score_tot_norm, width=20)
+
+        self.view_btn = tk.Checkbutton(self, text="Display Density Normed", variable=parent.view_mode)
+        self.update_btn = tk.Button(self, text="Calculate", width=20)
+
+        self.score_lbl_0.grid(row=0, column=0, sticky="e", pady=4)
+        self.score_lbl_1.grid(row=0, column=1, sticky="w", pady=4)
+        self.score_lbl_1.configure(relief="groove", bd=2, background="#28c5e0")
         
-        self.score_tot_lbl.pack(side="left")
-        self.score_num_tot_lbl.pack(side="left")
-        self.score_num_tot_lbl.configure(relief="groove", bd=2, background="#eb9b34")
+        self.score_blk_lbl_0.grid(row=0, column=2, sticky="e", pady=4)
+        self.score_blk_lbl_1.grid(row=0, column=3, sticky="w", pady=4)
+        self.score_blk_lbl_1.configure(relief="groove", bd=2, background="#eb9b34")
+        
+        self.view_btn.grid(row=0, column=4, sticky="e", pady=4)
 
-        self.update_btn.pack(side="right")
+        self.score_norm_lbl_0.grid(row=1, column=0, sticky="e")
+        self.score_norm_lbl_1.grid(row=1, column=1, sticky="w")
+        self.score_norm_lbl_1.configure(relief="groove", bd=2, background="#5eff3d")
+
+        self.score_blk_norm_lbl_0.grid(row=1, column=2, sticky="e")
+        self.score_blk_norm_lbl_1.grid(row=1, column=3, sticky="w")
+        self.score_blk_norm_lbl_1.configure(relief="groove", bd=2, background="#e414ff")
+
+        self.update_btn.grid(row=1, column=4, sticky="e", padx=4, pady=4)
+        
+        for i, w in enumerate([10,20,10,20,10]):
+            self.columnconfigure(i, weight=w)        
 
 class MainApplication(tk.Frame):
 
@@ -252,8 +275,10 @@ class MainApplication(tk.Frame):
         y_spc = y_max/y_blk
         x = self.areadisplay.x - (self.areadisplay.x % (x_spc))
         y = self.areadisplay.y - (self.areadisplay.y % (y_spc))
-       
-        self.areadisplay.render_image(normalize_arb(self.block_arr, self.max.get()))
+        if self.view_mode.get():
+            self.areadisplay.render_image(np.multiply(self.norm_arr, normalize_arb(self.block_arr, self.max.get())))
+        else:
+            self.areadisplay.render_image(normalize_arb(self.block_arr, self.max.get()))
         self.areadisplay.can.create_rectangle(x, y, x+x_spc, y+y_spc,outline="orange")
 
         x, y = self.areadisplay.x, self.areadisplay.y
@@ -264,20 +289,24 @@ class MainApplication(tk.Frame):
         self.curr_score.set(f'{self.block_arr[y_ind, x_ind]: .3f}')
         self.curr_score_tot.set(f'{self.block_arr[y_ind, x_ind]*div_area: .3f}')
 
+        if isinstance(self.cy5_arr,np.ndarray):
+            self.curr_score_norm.set(f'{self.block_arr[y_ind, x_ind]*self.norm_arr[y_ind, x_ind]: .3f}')
+            self.curr_score_tot_norm.set(f'{self.block_arr[y_ind, x_ind]*self.norm_arr[y_ind, x_ind]*div_area: .3f}')
+
     def save_NET_map(self):
         print("Saving topological map and matlab file")
-        cv2.imwrite(f"{self.out_path}/{self.out_name}.png", self.block_arr, [cv2.IMWRITE_PNG_COMPRESSION, 0])
+        cv2.imwrite(f"{self.out_path.get()}/{self.out_name.get()}.png", self.block_arr, [cv2.IMWRITE_PNG_COMPRESSION, 0])
         num_divs = self.num_divs.get()
         div_area = (self.arr.shape[0] // num_divs) * (self.arr.shape[1] // num_divs)
         savedict = {"per_area": self.block_arr*div_area,
                     "per_px": self.block_arr,
-                    "dense_norm_per_area:": "currently unavailable",
-                    "dense_norm_per_px:": "currently unavailable",
+                    "dense_norm_per_area:": self.norm_arr*div_area,
+                    "dense_norm_per_px:": self.norm_arr,
                     "area_px": div_area,
                     "num_divs": num_divs,
                     "total_px_width": self.arr.shape[0],
                     "total_px_length": self.arr.shape[1]}
-        savemat(f"{self.out_path}/{self.out_name}.mat", savedict)
+        savemat(f"{self.out_path.get()}/{self.out_name.get()}.mat", savedict)
         print("Finished saving")
 
     def update_all(self):
@@ -293,32 +322,28 @@ class MainApplication(tk.Frame):
         num_divs = self.num_divs.get()
         div_area = self.arr.shape[0] // num_divs * self.arr.shape[1] // num_divs
         self.block_arr = sum_px(self.arr, num_divs) / div_area
-        self.areadisplay.render_image(normalize_arb(self.block_arr, self.max.get()))
+        self.norm_arr = normalize1(sum_px(self.cy5_arr, num_divs))
+        if self.view_mode.get():
+            self.areadisplay.render_image(normalize_arb(np.multiply(self.norm_arr, normalize1(self.block_arr)),self.max.get()))
+        else:
+            self.areadisplay.render_image(normalize_arb(self.block_arr, self.max.get()))
 
     def load_image(self, path, type: str):
         try:
             if type == "egfp":
                 self.arr = np.array(Image.open(path))
-                
-                len_x, len_y = self.arr.shape
                 self.orig_arr = np.array(self.arr)  
-                if not self.dapi_arr:
-                    self.areadisplay.render_image(self.arr)
+                self.areadisplay.render_image(self.arr)
                 
             elif type == "dapi": 
                 self.dapi_arr = np.array(Image.open(path))
-                len_x, len_y = self.dapi_arr.shape
-                trim_x = int(len_x/20)
-                trim_y = int(len_y/20)
-                self.dapi_arr = self.dapi_arr[trim_x:len_x-trim_x, trim_y:len_y-trim_y]
-
+            
+            elif type == "cy5": 
+                self.cy5_arr = np.array(Image.open(path))
             if isinstance(self.dapi_arr,np.ndarray) and isinstance(self.arr, np.ndarray):
                 self.update_all()
-        except AttributeError:
+        except AttributeError as e:
             pass
-
-
-
 
     def __init__(self, parent, *args, **kwargs):
         tk.Frame.__init__(self, parent, *args, **kwargs)
@@ -337,15 +362,21 @@ class MainApplication(tk.Frame):
         self.low = tk.IntVar(self)
         self.high = tk.IntVar(self)
         self.max = tk.DoubleVar(self)
+        
         self.curr_score = tk.StringVar(self)
         self.curr_score_tot = tk.StringVar(self)
-        
+        self.curr_score_norm = tk.StringVar(self)
+        self.curr_score_tot_norm = tk.StringVar(self)
+        self.view_mode = tk.BooleanVar(self)
+
         self.out_name.set("NET_scores")
 
         self.orig_arr = None
         self.dapi_arr = None
+        self.cy5_arr = None
         self.arr = None
         self.block_arr = None
+        self.norm_arr = None
         self.filter_arr = None
 
         self.parent = parent
@@ -367,6 +398,7 @@ class MainApplication(tk.Frame):
 
         self.in_egfp.trace_add("write", lambda n, i, d: self.load_image(self.in_egfp.get(), "egfp"))
         self.in_dapi.trace_add("write", lambda n, i, d: self.load_image(self.in_dapi.get(), "dapi"))
+        self.in_cy5.trace_add("write", lambda n, i, d: self.load_image(self.in_cy5.get(), "cy5"))
         self.scorebar.update_btn.bind("<ButtonPress-1>", lambda event: self.update_all())
         self.areadisplay.can.bind("<ButtonPress-1>", lambda event: self.update_net_score())
         self.savebar.save_btn.bind("<ButtonPress-1>", lambda event: self.save_NET_map())
@@ -376,7 +408,7 @@ window_width, window_height = 0, 0
 
 if __name__ == "__main__":
     root = tk.Tk()
-    root.title("NET Score Browser")
+    root.title("Score Browser")
     root.minsize(600, 700)
     root.geometry("800x900")
     main_app = MainApplication(root)
