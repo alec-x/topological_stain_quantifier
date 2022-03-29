@@ -241,20 +241,22 @@ class MainApplication(tk.Frame):
             pass
 
         x_max, y_max = self.areadisplay.can.winfo_width(), self.areadisplay.can.winfo_height()
-        x_spc = x_max/self.num_divs.get()/2
-        y_spc = y_max/self.num_divs.get()/2
-        x, y = self.areadisplay.x, self.areadisplay.y
+        x_blk, y_blk = self.block_arr.shape
+        x_spc = x_max/x_blk
+        y_spc = y_max/y_blk
+        x = self.areadisplay.x - (self.areadisplay.x % (x_spc))
+        y = self.areadisplay.y - (self.areadisplay.y % (y_spc))
        
         self.areadisplay.render_image(normalize_arb(self.block_arr, self.max.get()))
-        self.areadisplay.can.create_rectangle(x-x_spc, y-y_spc, x+x_spc, y+y_spc,outline="orange")
-        
-        x_big = int(self.areadisplay.x / x_max * self.arr.shape[0])
-        y_big = int(self.areadisplay.y / y_max * self.arr.shape[1])
-        x_spc = int(x_spc * self.filter_arr.shape[0] / x_max / 2)
-        y_spc = int(y_spc * self.filter_arr.shape[1] / y_max / 2)
+        self.areadisplay.can.create_rectangle(x, y, x+x_spc, y+y_spc,outline="orange")
 
-        self.zoomdisplay.render_image(self.filter_arr[y_big-y_spc:y_big+y_spc, x_big-x_spc:x_big+x_spc])
-        self.update_net_score()
+        x, y = self.areadisplay.x, self.areadisplay.y
+        num_divs = self.num_divs.get()
+        div_area = (self.arr.shape[0] // num_divs) * (self.arr.shape[1] // num_divs)
+
+        x_ind, y_ind = int(x / x_max * x_blk), int(y / y_max * y_blk)
+        self.curr_score.set(f'{self.block_arr[y_ind, x_ind]: .3f}')
+        self.curr_score_tot.set(f'{self.block_arr[y_ind, x_ind]*div_area: .3f}')
 
     def save_NET_map(self, img: np.array, name: str):
         base_name = ntpath.basename(self.in_egfp.get())
@@ -267,11 +269,12 @@ class MainApplication(tk.Frame):
             subtract_calc(self.dapi_arr, self.mid_erode.get()))
 
         self.arr = threshold(self.filter_arr, self.low.get(), self.high.get())
-        self.max.set(np.max(sum_px(self.arr, self.num_divs.get())))
         self.update_grid()
 
     def update_grid(self):
-        self.block_arr = sum_px(self.arr, self.num_divs.get())
+        num_divs = self.num_divs.get()
+        div_area = self.arr.shape[0] // num_divs * self.arr.shape[1] // num_divs
+        self.block_arr = sum_px(self.arr, num_divs) / div_area
         self.areadisplay.render_image(normalize_arb(self.block_arr, self.max.get()))
 
     def load_image(self, path, type: str):
@@ -298,12 +301,7 @@ class MainApplication(tk.Frame):
         except AttributeError:
             pass
 
-    def update_net_score(self):
-        x, y = self.areadisplay.x, self.areadisplay.y
-        x_dis, y_dis = self.areadisplay.can.winfo_width(), self.areadisplay.can.winfo_height()
-        x_max, y_max = self.block_arr.shape
-        x_ind, y_ind = int(x / x_dis * x_max), int(y / y_dis * y_max)
-        self.curr_score.set(f'{self.block_arr[y_ind, x_ind]: .3f}')
+
 
 
     def __init__(self, parent, *args, **kwargs):
@@ -344,15 +342,14 @@ class MainApplication(tk.Frame):
         self.savebar.pack(side="top", fill="x") 
         self.varsliders.pack(side="top", fill="x")
         self.scorebar.pack(side="top", fill="x")
-        self.areadisplay.pack(side="left", expand=True, fill="both")
-        self.zoomdisplay.pack(side="right", expand=True, fill="both")
+        self.areadisplay.pack(side="top", expand=True, fill="both")
 
         self.in_egfp.trace_add("write", lambda n, i, d: self.load_image(self.in_egfp.get(), "egfp"))
         self.in_dapi.trace_add("write", lambda n, i, d: self.load_image(self.in_dapi.get(), "dapi"))
         self.scorebar.update_btn.bind("<ButtonPress-1>", lambda event: self.update_all())
         self.num_divs.trace_add("write", lambda n, i, d: self.update_grid())
         self.max.trace_add("write", lambda n, i, d: self.update_grid())
-        self.areadisplay.can.bind("<ButtonPress-1>", lambda event: self.switch_zoom())
+        self.areadisplay.can.bind("<ButtonPress-1>", lambda event: self.update_net_score())
 
 drag_id = None
 window_width, window_height = 0, 0
