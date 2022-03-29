@@ -86,14 +86,19 @@ class PathBar(tk.Frame):
         in_egfp_txt = tk.Entry(self, textvariable=parent.in_egfp)
         in_dapi_lbl = tk.Label(self, text="DAPI path:")
         in_dapi_txt = tk.Entry(self, textvariable=parent.in_dapi)
-
+        in_cy5_lbl = tk.Label(self, text="Cy5 path:")
+        in_cy5_txt = tk.Entry(self, textvariable=parent.in_cy5)
+        
         in_egfp_lbl.pack(side="left", padx=XPAD, pady=YPAD)
         in_egfp_txt.pack(side="left", fill="x", expand=True, padx=XPAD, pady=YPAD)
         in_dapi_lbl.pack(side="left", padx=XPAD, pady=YPAD)
         in_dapi_txt.pack(side="left", fill="x", expand=True, padx=XPAD, pady=YPAD)
+        in_cy5_lbl.pack(side="left", padx=XPAD, pady=YPAD)
+        in_cy5_txt.pack(side="left", fill="x", expand=True, padx=XPAD, pady=YPAD)
 
         in_egfp_txt.bind("<ButtonPress-1>", lambda event: self.__browse_file(in_egfp_txt))
         in_dapi_txt.bind("<ButtonPress-1>", lambda event: self.__browse_file(in_dapi_txt))
+        in_dapi_txt.bind("<ButtonPress-1>", lambda event: self.__browse_file(in_cy5_txt))
 
 class SaveBar(tk.Frame):
     def __browse_folder(self, textbox):
@@ -161,21 +166,26 @@ class SlidersBar(tk.Frame):
         self.grid_line_sld = SimpleSlider(self, "Num Grid Lines", (10,400),5,parent.num_divs,60)
         self.mid_erode_sld = SimpleSlider(self, "Middle Erosion", (0, 100), 1, parent.mid_erode, 20)
         self.adapt_sld = SimpleSlider(self, "Adaptive Background Removal Dia.", (50, 1000), 5, parent.adapt_dia, 100)
-        self.adapd_sld_pct = SimpleSlider(self, "Adaptive Background Removal pct", (0, 10), 0.1, parent.adapt_pct, 0.5)
+        self.adapt_sld_pct = SimpleSlider(self, "Adaptive Background Removal pct", (0, 10), 0.05, parent.adapt_pct, 0.5)
         self.low_sld = SimpleSlider(self, "Px Value Lim (low)", (0, 254), 1, parent.low, 6)
         self.high_sld = SimpleSlider(self, "Px Value Lim (high)", (1, 255), 1, parent.high, 30)
         self.max_sld = SimpleSlider(self, "Scale (highest)", (0, 1), 0.01, parent.max, 1)
-        
+        # There should be a better way to do configuring
         self.grid_line_sld.grid(column=0, row=0, sticky="ew", columnspan=2)
-        self.mid_erode_sld.grid(column=0, row=1, sticky="ew", columnspan=2)
-        self.adapt_sld.grid(column=0, row=2, sticky="ew", columnspan=2)
-        self.adapd_sld_pct.grid(column=0, row=3, sticky="ew", columnspan=2)
+        self.grid_line_sld.configure(relief="raised", bd=2)
+        self.mid_erode_sld.grid(column=1, row=0, sticky="ew", columnspan=2)
+        self.mid_erode_sld.configure(relief="raised", bd=2)
+        self.adapt_sld.grid(column=0, row=1, sticky="ew", columnspan=2)
+        self.adapt_sld.configure(relief="raised", bd=2)
+        self.adapt_sld_pct.grid(column=1, row=1, sticky="ew", columnspan=2)
+        self.adapt_sld_pct.configure(relief="raised", bd=2)
 
-        self.low_sld.grid(column=0, row=4, sticky="ew")
+        self.low_sld.grid(column=0, row=2, sticky="ew")
         self.low_sld.configure(relief="raised", bd=2)
-        self.high_sld.grid(column=1, row=4, sticky="ew")
+        self.high_sld.grid(column=1, row=2, sticky="ew")
         self.high_sld.configure(relief="raised", bd=2)
-        self.max_sld.grid(column=0, row=5, sticky="ew", columnspan=2)
+        self.max_sld.grid(column=0, row=3, sticky="ew", columnspan=2)
+        self.max_sld.configure(relief="raised", bd=2)
 
         self.columnconfigure(0, weight=1)
         self.columnconfigure(1, weight=1)
@@ -185,11 +195,8 @@ class Display(tk.Frame):
         self.x, self.y = event.x, event.y
 
     def render_image(self, img_arr):
-        try:
-            if img_arr == None:
-                return
-        except ValueError as e:
-            pass
+        if not isinstance(img_arr,np.ndarray):
+            return
    
         can = self.can
         disp_width = can.winfo_width()
@@ -236,11 +243,8 @@ class ScoreBar(tk.Frame):
 class MainApplication(tk.Frame):
 
     def update_net_score(self):
-        try:
-            if not self.block_arr:
-                return
-        except ValueError:
-            pass
+        if not isinstance(self.block_arr,np.ndarray):
+            return
 
         x_max, y_max = self.areadisplay.can.winfo_width(), self.areadisplay.can.winfo_height()
         x_blk, y_blk = self.block_arr.shape
@@ -297,20 +301,18 @@ class MainApplication(tk.Frame):
                 self.arr = np.array(Image.open(path))
                 
                 len_x, len_y = self.arr.shape
-                trim_x = int(len_x/20)
-                trim_y = int(len_y/20)
-                self.arr = self.arr[trim_x:len_x-trim_x, trim_y:len_y-trim_y]
                 self.orig_arr = np.array(self.arr)  
                 if not self.dapi_arr:
                     self.areadisplay.render_image(self.arr)
                 
-            else: 
+            elif type == "dapi": 
                 self.dapi_arr = np.array(Image.open(path))
                 len_x, len_y = self.dapi_arr.shape
                 trim_x = int(len_x/20)
                 trim_y = int(len_y/20)
                 self.dapi_arr = self.dapi_arr[trim_x:len_x-trim_x, trim_y:len_y-trim_y]
-                
+
+            if isinstance(self.dapi_arr,np.ndarray) and isinstance(self.arr, np.ndarray):
                 self.update_all()
         except AttributeError:
             pass
@@ -323,6 +325,7 @@ class MainApplication(tk.Frame):
 
         self.in_egfp = tk.StringVar(self)
         self.in_dapi = tk.StringVar(self)
+        self.in_cy5 = tk.StringVar(self)
         self.out_path = tk.StringVar(self)
         self.out_name = tk.StringVar(self)
 
@@ -348,7 +351,9 @@ class MainApplication(tk.Frame):
         self.parent = parent
 
         self.pathbar = PathBar(self)
+        self.pathbar.configure(relief="raised", bd=2)
         self.savebar = SaveBar(self)
+        self.savebar.configure(relief="raised", bd=2)
         self.varsliders = SlidersBar(self)
         self.areadisplay = Display(self)
         self.zoomdisplay = Display(self)
