@@ -8,6 +8,7 @@ import cv2
 import scipy.ndimage as ndi
 from scipy.io import savemat
 from skimage.measure import block_reduce
+from matplotlib import pyplot as plt
 
 XPAD = 8
 YPAD = 4
@@ -72,8 +73,8 @@ def sum_px(arr, num_divs):
     return block_reduce(arr, targ_div, np.sum)
 
 class PathBar(tk.Frame):
-    def __browse_file(self, textbox):
-        path = filedialog.askopenfilename(parent=self, title="Please select NET EGFP image")
+    def __browse_file(self, textbox, text="Please select image"):
+        path = filedialog.askopenfilename(parent=self, title=text)
         if len(path) > 0:
             textbox.delete(0, "end")
             textbox.insert(0,path)
@@ -99,9 +100,9 @@ class PathBar(tk.Frame):
         in_cy5_lbl.pack(side="left", padx=XPAD, pady=YPAD)
         in_cy5_txt.pack(side="left", fill="x", expand=True, padx=XPAD, pady=YPAD)
 
-        in_egfp_txt.bind("<ButtonPress-1>", lambda event: self.__browse_file(in_egfp_txt))
-        in_dapi_txt.bind("<ButtonPress-1>", lambda event: self.__browse_file(in_dapi_txt))
-        in_cy5_txt.bind("<ButtonPress-1>", lambda event: self.__browse_file(in_cy5_txt))
+        in_egfp_txt.bind("<ButtonPress-1>", lambda event: self.__browse_file(in_egfp_txt, text="Please select NET EGFP image"))
+        in_dapi_txt.bind("<ButtonPress-1>", lambda event: self.__browse_file(in_dapi_txt, text="Please select NET DAPI image"))
+        in_cy5_txt.bind("<ButtonPress-1>", lambda event: self.__browse_file(in_cy5_txt, text="Please select NET Cy5 image"))
 
 class SaveBar(tk.Frame):
     def __browse_folder(self, textbox):
@@ -295,7 +296,15 @@ class MainApplication(tk.Frame):
 
     def save_NET_map(self):
         print("Saving topological map and matlab file")
-        cv2.imwrite(f"{self.out_path.get()}/{self.out_name.get()}.png", self.block_arr, [cv2.IMWRITE_PNG_COMPRESSION, 0])
+        arr_to_save = None
+        if self.view_mode.get():
+            arr_to_save = np.multiply(self.norm_arr, normalize_arb(self.block_arr, self.max.get()))
+        else:
+            arr_to_save = normalize_arb(self.block_arr, self.max.get())
+        plt.imshow(arr_to_save,interpolation='nearest')
+        plt.colorbar()
+        plt.axis('off')
+        plt.savefig(f"{self.out_path.get()}/{self.out_name.get()}.png", bbox_inches='tight') 
         num_divs = self.num_divs.get()
         div_area = (self.arr.shape[0] // num_divs) * (self.arr.shape[1] // num_divs)
         savedict = {"per_area": self.block_arr*div_area,
@@ -341,7 +350,7 @@ class MainApplication(tk.Frame):
             elif type == "cy5": 
                 self.cy5_arr = np.array(Image.open(path))
 
-            if isinstance(self.dapi_arr, np.ndarray) and isinstance(self.arr, np.ndarray):
+            if isinstance(self.dapi_arr, np.ndarray) and isinstance(self.arr, np.ndarray) and isinstance(self.cy5, np.ndarray):
                 self.update_all()
 
         except AttributeError as e:
