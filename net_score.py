@@ -174,20 +174,20 @@ class SlidersBar(tk.Frame):
         self.high_sld = SimpleSlider(self, "Px Value Lim (high)", (1, 255), 1, parent.high, 30)
         self.max_sld = SimpleSlider(self, "Scale (highest)", (0, 1), 0.01, parent.max, 1)
         # There should be a better way to do configuring
-        self.grid_line_sld.grid(column=0, row=0, sticky="ew", columnspan=2)
+        self.grid_line_sld.grid(column=0, row=0, sticky="ew")
         self.grid_line_sld.configure(relief="raised", bd=2)
-        self.mid_erode_sld.grid(column=1, row=0, sticky="ew", columnspan=2)
+        self.mid_erode_sld.grid(column=1, row=0, sticky="ew")
         self.mid_erode_sld.configure(relief="raised", bd=2)
-        self.adapt_sld.grid(column=0, row=1, sticky="ew", columnspan=2)
+        self.adapt_sld.grid(column=0, row=1, sticky="ew")
         self.adapt_sld.configure(relief="raised", bd=2)
-        self.adapt_sld_pct.grid(column=1, row=1, sticky="ew", columnspan=2)
+        self.adapt_sld_pct.grid(column=1, row=1, sticky="ew")
         self.adapt_sld_pct.configure(relief="raised", bd=2)
 
         self.low_sld.grid(column=0, row=2, sticky="ew")
         self.low_sld.configure(relief="raised", bd=2)
         self.high_sld.grid(column=1, row=2, sticky="ew")
         self.high_sld.configure(relief="raised", bd=2)
-        self.max_sld.grid(column=0, row=3, sticky="ew", columnspan=2)
+        self.max_sld.grid(column=0, row=3, sticky="ew")
         self.max_sld.configure(relief="raised", bd=2)
 
         self.columnconfigure(0, weight=1)
@@ -340,8 +340,10 @@ class MainApplication(tk.Frame):
             
             elif type == "cy5": 
                 self.cy5_arr = np.array(Image.open(path))
-            if isinstance(self.dapi_arr,np.ndarray) and isinstance(self.arr, np.ndarray):
+
+            if isinstance(self.dapi_arr, np.ndarray) and isinstance(self.arr, np.ndarray):
                 self.update_all()
+
         except AttributeError as e:
             pass
 
