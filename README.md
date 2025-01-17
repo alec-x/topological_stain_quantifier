@@ -1,6 +1,6 @@
 # topological_stain_quantifier
 
-Calculate topological map of stains using 2D images
+Calculate topological map of stains using 2D images.
 
 ## Use Case 1: Quantify NET in region
 
