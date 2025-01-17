@@ -6,7 +6,8 @@ Calculate topological map of stains using 2D images
 
 ### Background
 Neutrophils apoptose, releasing DNA that creates a dead zone. This effect is
-called a neutrophil extracellular trap
+called a neutrophil extracellular trap. In this tool, we have created a custom
+measurement of the leve of NETs.
 
 ### Measurements Given
 **Green Stain (EGFP)** 
